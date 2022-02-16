@@ -1,9 +1,9 @@
 package org.example;
 
-
 import com.google.common.collect.ImmutableMap;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.apache.spark.SparkConf;
 import org.apache.spark.sql.*;
 import org.apache.spark.sql.expressions.Window;
 import org.apache.spark.sql.types.DataType;
@@ -11,7 +11,9 @@ import org.apache.spark.sql.types.DataTypes;
 import org.apache.spark.sql.functions.*;
 
 import java.io.*;
+import java.util.Properties;
 
+import static com.datastax.spark.connector.japi.CassandraJavaUtil.mapToRow;
 import static org.apache.spark.sql.functions.*;
 
 
@@ -19,6 +21,9 @@ public class Main {
 
     public static void main(String[] args) throws IOException {
         // TODO Auto-generated method stub
+        Logger.getLogger("org.apache").setLevel(Level.WARN);
+        System.setProperty("hadoop.home.dir", "c:/hadoop-3.2.1");
+
         Logger.getLogger("org.apache").setLevel(Level.WARN);
         System.setProperty("hadoop.home.dir", "c:/hadoop-3.2.1");
         SparkSession spark = SparkSession.builder()
@@ -86,6 +91,15 @@ public class Main {
 
         all_flight = all_flight.orderBy(col("total_airtraffic").desc());
 
+        // Saving data to a JDBC source
+        all_flight.write()
+                .format("jdbc")
+                .mode(SaveMode.Append)
+                .option("url", "jdbc:postgresql://localhost:5432/airline")
+                .option("dbtable", "airtraffic")
+                .option("user", "postgres")
+                .option("password", "password")
+                .save();
         //popularity of the company
 
         Dataset<Row> popularity = data.groupBy("Description").count().orderBy(col("count").desc());
@@ -109,6 +123,15 @@ public class Main {
         proportion_delay = proportion_delay.withColumn("proportion",
                 round(col("total flight").divide(col("delayed flight")),2)).orderBy(col("proportion").asc());
 
+        proportion_delay.write()
+                .format("jdbc")
+                .mode(SaveMode.Append)
+                .option("url", "jdbc:postgresql://localhost:5432/airline")
+                .option("dbtable", "proportion_delay")
+                .option("user", "postgres")
+                .option("password", "password")
+                .save();
+
         //busy routes
 
         Dataset<Row> busy_routes = data.groupBy("origin_airport","dest_airport").count().orderBy(col("count").desc());
@@ -117,7 +140,7 @@ public class Main {
 
         data = data.withColumn("issue_year",split(col("issue_date"),"/").getItem(2).cast(DataTypes.IntegerType));
 
-        data.filter(col("isDelayed").gt(0)).groupBy("issue_year").count().orderBy(col("count").desc()).show();
+        //data.filter(col("isDelayed").gt(0)).groupBy("issue_year").count().orderBy(col("count").desc()).show();
 
         //What is the best time of day, of week, of year to fly to minimize delays
 
@@ -125,14 +148,22 @@ public class Main {
         data = data.withColumn("CRSDepTime",from_unixtime(col("CRSDepTime"),"hh:mm:ss"));
 
         //by time of the day
-        data.filter(col("isDelayed").gt(0)).groupBy(hour(col("CRSDepTime"))).count().orderBy(col("count")).show();
+        //data.filter(col("isDelayed").gt(0)).groupBy(hour(col("CRSDepTime"))).count().orderBy(col("count")).show();
 
         //by day of the week
-        data.filter(col("isDelayed").gt(0)).groupBy("DayOfWeek").count().orderBy(col("count")).show();
+        //data.filter(col("isDelayed").gt(0)).groupBy("DayOfWeek").count().orderBy(col("count")).show();
 
         //by month of the year
-        data.filter(col("isDelayed").gt(0)).groupBy(col("Month")).count().orderBy(col("count")).show();
-
+        //data.filter(col("isDelayed").gt(0)).groupBy(col("Month")).count().orderBy(col("count")).show();
+        data = data.drop("year");
+        data.write()
+                .format("jdbc")
+                .mode(SaveMode.Append)
+                .option("url", "jdbc:postgresql://localhost:5432/airline")
+                .option("dbtable", "airline_dataset")
+                .option("user", "postgres")
+                .option("password", "password")
+                .save();
 
         spark.close();
     }

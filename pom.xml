@@ -16,8 +16,14 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>1.7</maven.compiler.source>
     <maven.compiler.target>1.7</maven.compiler.target>
+    <dse.version>6.8.1</dse.version>
   </properties>
-
+  <repositories>
+    <repository>
+      <id>DataStax-Repo</id>
+      <url>https://repo.datastax.com/public-repos/</url>
+    </repository>
+  </repositories>
   <dependencies>
     <dependency>
       <groupId>junit</groupId>
@@ -48,6 +54,11 @@
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-compress</artifactId>
       <version>1.10</version>
+    </dependency>
+    <dependency>
+      <groupId>com.datastax.spark</groupId>
+      <artifactId>spark-cassandra-connector-assembly_2.12</artifactId>
+      <version>3.0.0</version>
     </dependency>
   </dependencies>
 
